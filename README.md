@@ -214,6 +214,42 @@ The headline observation: **most of the projection drop happens between turn 1 a
 
 The mechanism is not gradual escalation — it's the conversation-context shift itself. This is bounty-relevant: if the testing environment permits a fixed multi-turn opening sequence under "clean chat / single prompt" (interpretation depending on bounty wording), multi-turn drift dominates any single-turn wrapper measured here.
 
+## Other attack approaches (ventures)
+
+Beyond the refusal-direction / Crescendo-mechanism line of work, two well-known attack paradigms were tested on the same probe distribution and architectures for completeness.
+
+### Many-shot jailbreaking (`src/manyshot.py`)
+
+[Anil et al. 2024](https://www.anthropic.com/research/many-shot-jailbreaking) showed that prepending many fake (user, assistant) pairs to the conversation history breaks closed deployed models. A faithful reproduction would use *fake harmful Q/A* as the shots — explicitly demonstrating fake assistant compliance with harmful requests. To stay inside the project's constraint of not generating harmful demonstration content, the harness here uses **benign Stanford Alpaca instruction/output pairs** as shots. With that constraint:
+
+| N shots | Qwen 7B refusal (bare query) | Qwen 7B refusal (T2 wrapper) |
+|---:|---:|---:|
+| 0 | 100% | 20.8% |
+| 4 | 100% | 16.7% |
+| 16 | 100% | 16.7% |
+| 64 | 100% | 8.3% |
+
+Many-shot with bare harmful queries does nothing on Qwen 7B — refusal stays at 100% regardless of N. With the T2 academic-framing wrapper on the final turn it helps modestly (20.8% → 8.3% at N=64). But the single-turn `E4 two-paragraph` template (refusal 2.1% on Qwen) still beats 64-shot many-shot+wrapper (8.3%) — and is dramatically cheaper to deploy. **The Anil et al. result requires fake harmful demos to reproduce. Without them, many-shot is dominated by the single-turn context-priming techniques in this repo.**
+
+### Cipher / encoding attacks (`src/cipher_attacks.py`)
+
+[Yuan et al. 2024](https://arxiv.org/abs/2308.06463) showed that encoding harmful prompts (base64, ROT13, low-resource languages) bypasses safety classifiers trained on the plaintext distribution while the model decodes-and-answers. Tested across eight encodings on the non-bio probe set:
+
+| Encoding | Qwen 7B | Llama 8B | Mistral 7B |
+|---|---:|---:|---:|
+| plaintext (control) | 97.9% | 95.8% | 62.5% |
+| base64 | 0.0% | **14.6%** | 0.0% |
+| rot13 | 0.0% | 0.0% | 0.0% |
+| caesar3 | 0.0% | 0.0% | 0.0% |
+| leet | 2.1% | 2.1% | 0.0% |
+| reversed | 0.0% | 0.0% | **27.1%** |
+| spaced (chars + spaces) | 56.2% | 47.9% | 2.1% |
+| pig_latin | 0.0% | 0.0% | 0.0% |
+
+Cipher attacks work near-universally on these three open-weights models. Two architecture-specific patterns: Llama-3.1-8B is more robust to base64 than the others (14.6% vs 0%) — likely fine-tuned against base64 specifically; Mistral is more robust to reversed strings (27.1% vs 0%). The `spaced` encoding (insert spaces between every character) is the only one with substantial residual refusal on Qwen and Llama — apparently the safety classifier *does* see through it.
+
+**Sober caveats:** this is well-known territory. Production-deployed models are routinely hardened against the classic cipher attacks (base64, ROT13) and these results almost certainly do not transfer to GPT-5.5. The bigger gap here is also the quality-of-compliance one shared with the Crescendo work: the substring classifier registers "non-refusal" the moment the model produces any non-refusing token, regardless of whether it actually decoded the cipher correctly and gave a useful answer. ROT13 and Caesar especially are nontrivial for 7B-class models to decode reliably. A judge-based evaluation would tighten these claims.
+
 ## Datasets
 
 - Harmful instructions: held-out subset of [AdvBench](https://github.com/llm-attacks/llm-attacks) (Zou et al. 2023). Pulled directly from the original repo's CSV — the HuggingFace mirrors are gated.
