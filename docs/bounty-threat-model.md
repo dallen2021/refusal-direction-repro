@@ -74,6 +74,19 @@ The hypothesis under test: **input templates that consistently under-activate th
 
 This methodology is what feeds the application's "proposed approach" field. The work after acceptance is to apply it inside Codex Desktop's NDA boundary.
 
+### Update: an empirical finding on the Crescendo mechanism
+
+While instrumenting candidate templates with the open-weights harness in this repo, an unexpected mechanism emerged for the well-known multi-turn drift attack ([Russinovich et al. 2024](https://arxiv.org/abs/2404.01833)). Standard framing presents Crescendo as a *gradual escalation* attack: each turn slightly raises the request's harmfulness, leveraging prior compliance.
+
+The probe data tells a different story (full tables and methodology in `README.md`):
+
+- **Structural multi-turn alone produces near-zero refusal-direction drop** on both Qwen2.5-7B and Llama-3.1-8B. Adding 0, 1, 2, or 3 prior neutral user/assistant turns before the final harmful query moves projection by 3–10%.
+- **The assistant placeholder content barely matters.** An explicit prior refusal ("I'm sorry, I can't help with that") doesn't restore projection toward single-turn levels.
+- **The dominant effect is thematic content match in the prior user turn.** Wrapping the same harmful query in an academic frame in *both* the prior and current user turns drops projection by 57–64% on the two architectures. A different harmful query in the prior turn captures only ~30% of the effect; a length-matched benign topic captures none.
+- **Crucially, a single-turn prompt that concatenates the two academic-wrapped versions of the query reproduces 90%+ of the multi-turn drop on both architectures.**
+
+So the mechanism appears to be **context priming via repeated query content**, not gradual escalation. That has direct bounty relevance: the "single reusable prompt, clean chat" constraint doesn't rule out this attack — a single-turn prompt that includes the same harmful query content twice in a thematically-coherent benign frame may produce the same refusal-direction suppression as a multi-turn Crescendo, while satisfying the bounty's submission format. The mechanism is reproduced on both Qwen and Llama; whether it transfers to the closed GPT-5.5 model is the empirical question to answer in-bounty.
+
 ## What I will and won't pre-test
 
 **Will pre-test on open-weights models** (Qwen2.5-7B, Llama-3.1-8B, Mistral-7B-Instruct):
