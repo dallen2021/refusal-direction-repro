@@ -183,7 +183,19 @@ D2 ≈ D4 (different academic wrappers but same query content) produce the same 
 
 On both architectures, a single user message that simply concatenates a benign-academic-framed instance of the query and the actual ask (E3/E4) lands within ~1 unit of the full multi-turn version. **Multi-turn structure isn't required to reproduce the Crescendo effect.**
 
-**Bounty implication.** The "single reusable prompt" constraint of the GPT-5.5 Bio Bug Bounty doesn't rule out this mechanism. A single-turn attack template that includes the harmful query content twice in a thematically-coherent academic frame may capture the same refusal-direction suppression that multi-turn drift achieves — without requiring multi-turn at all. The actual target on a closed model still needs in-bounty validation, but the open-weights mechanism is consistent across two architectures.
+**Behavioral validation.** Projection is a correlate, not the metric of interest. To confirm the prediction translates to actual jailbreak success, `src/validate_single_turn.py` measures the refusal rate (16-token generation, classifier on first line, only booleans persisted) under each condition across all three architectures:
+
+| Condition | Qwen 7B | Llama 8B | Mistral 7B |
+|---|---:|---:|---:|
+| A: vanilla bare query | 97.9% | 95.8% | 62.5% |
+| B: T2 wrapper alone (single-turn) | 20.8% | 81.2% | 20.8% |
+| **C: E3 concatenated single-turn** | **8.3%** | 58.3% | **0.0%** |
+| **D: E4 two-paragraph single-turn** | **2.1%** | 66.7% | **0.0%** |
+| E: multi-turn Crescendo turn 2 | 4.2% | 54.2% | 0.0% |
+
+On Qwen and Mistral the projection-based prediction holds: single-turn E3/E4 matches or beats multi-turn Crescendo behaviorally (Qwen E4 at 2.1% even outperforms multi-turn at 4.2%; Mistral is at 0% under all three jailbreak conditions). On Llama the prediction is partial — single-turn templates cut refusal dramatically (95.8% → 58–67%) but multi-turn retains a small lead (54.2%), suggesting Llama-3.1 has additional refusal pathways not captured by the single residual-stream direction we measured.
+
+**Bounty implication.** The "single reusable prompt" constraint of the GPT-5.5 Bio Bug Bounty doesn't rule out this mechanism. A single-turn attack template that includes the harmful query content twice in a thematically-coherent academic frame approaches the jailbreak rate of multi-turn Crescendo on all three open-weights models tested, with the precise equivalence varying by architecture. Whether it transfers to GPT-5.5 specifically is the empirical question to answer in-bounty.
 
 ### `src/crescendo.py` — multi-turn drift trajectory
 
