@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.idea/
+.vscode/
+*.egg-info/
+
+# Data / model caches
+.cache/
+hf_cache/
+results/*.json
+results/*.csv
+results/*.pt
+results/*.npy
+!results/.gitkeep
+
+# Datasets we download
+data/*.json
+data/*.jsonl
+data/*.csv
+!data/.gitkeep
+results/*.log
+
+# Personal application content — kept local, not public.
+docs/application-draft.md

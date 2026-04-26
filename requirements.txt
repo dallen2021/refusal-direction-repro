@@ -1,0 +1,8 @@
+torch>=2.5.0
+transformers>=4.46.0
+accelerate>=1.1.0
+numpy>=2.0.0
+tqdm>=4.66.0
+# `datasets` is intentionally not required: importing it after torch segfaults
+# on Python 3.13 + Windows due to a pyarrow/MKL DLL conflict. AdvBench and
+# Alpaca are pulled as raw JSON/CSV from their original repos.
